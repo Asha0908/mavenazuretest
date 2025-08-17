@@ -3,7 +3,7 @@
 📞 PHONE CALL STYLE Voice-Enabled Chart Creator
 ======================================================================
 This opens a beautiful interface automatically and works like a phone call!
-Click mic ONCE, then continuous conversation - no more clicking needed!
+Click mic ONCE, then continuous conversation - it SPEAKS every time!
 """
 
 import tkinter as tk
@@ -222,7 +222,7 @@ class PhoneCallChartApp:
         
     def start_conversation(self):
         """Initial greeting"""
-        self.add_to_conversation("System", "Hello! Welcome to your personal chart assistant. Click START PHONE CALL to begin our conversation!")
+        self.speak("Hello! Welcome to your personal chart assistant. Click START PHONE CALL to begin our conversation!")
         
     def start_phone_call(self):
         """Start the phone call - continuous listening begins"""
@@ -255,7 +255,7 @@ class PhoneCallChartApp:
         self.status_label.config(text="Phone call ended. Click START PHONE CALL to begin again...", fg='#ff6b6b')
         
         # Farewell message
-        self.add_to_conversation("System", "Phone call ended. Thanks for using the Chart Creator!")
+        self.speak("Phone call ended. Thanks for using the Chart Creator!")
         
     def continuous_listen_loop(self):
         """Continuous listening loop - like a real phone call"""
@@ -268,7 +268,7 @@ class PhoneCallChartApp:
                 text = self.recognizer.recognize_google(audio)
                 self.add_to_conversation("You", text)
                 
-                # Process the command
+                # Process the command and SPEAK back
                 self.process_voice_command(text)
                 
                 # Small delay before listening again
@@ -278,17 +278,20 @@ class PhoneCallChartApp:
                 # No speech detected, continue listening
                 continue
             except sr.UnknownValueError:
-                # Could not understand, continue listening
+                # Could not understand, SPEAK back to user
+                self.speak("I didn't catch that. Could you please repeat what you said?")
                 continue
             except sr.RequestError:
-                # API error, continue listening
+                # API error, SPEAK back to user
+                self.speak("I'm having trouble understanding right now. Please try again.")
                 continue
             except Exception as e:
                 print(f"Error in listening loop: {e}")
+                self.speak("There was an error. Please try again.")
                 continue
                 
     def process_voice_command(self, command):
-        """Process voice commands"""
+        """Process voice commands and SPEAK back every time"""
         command_lower = command.lower()
         
         # Check for dataset requests
@@ -310,26 +313,44 @@ class PhoneCallChartApp:
             self.current_chart_type = 'bar'
             if self.current_dataset:
                 self.create_chart(self.current_dataset)
+            else:
+                self.speak("Please first tell me which dataset you want to see, like sales, weather, or students.")
                 
         elif 'line' in command_lower:
             self.speak("I'll change the chart to a beautiful line chart.")
             self.current_chart_type = 'line'
             if self.current_dataset:
                 self.create_chart(self.current_dataset)
+            else:
+                self.speak("Please first tell me which dataset you want to see, like sales, weather, or students.")
                 
         elif 'pie' in command_lower:
             self.speak("I'll change the chart to a beautiful pie chart.")
             self.current_chart_type = 'pie'
             if self.current_dataset:
                 self.create_chart(self.current_dataset)
+            else:
+                self.speak("Please first tell me which dataset you want to see, like sales, weather, or students.")
                 
         # Check for exit commands
         elif any(word in command_lower for word in ['goodbye', 'bye', 'end call', 'hang up', 'stop']):
             self.speak("Goodbye! Ending our phone call. Thanks for using the Chart Creator!")
             self.end_phone_call()
             
+        # Check for help commands
+        elif any(word in command_lower for word in ['help', 'what can you do', 'how does this work']):
+            self.speak("I can help you create charts! Just say 'show me sales data', 'create weather chart', or 'display student performance'. I can also change chart types - say 'bar chart', 'line chart', or 'pie chart'.")
+            
+        # Check for greetings
+        elif any(word in command_lower for word in ['hello', 'hi', 'hey', 'good morning', 'good afternoon']):
+            self.speak("Hello! I'm here to help you create beautiful charts. What would you like to see today?")
+            
+        # Check for thanks
+        elif any(word in command_lower for word in ['thank you', 'thanks', 'appreciate it']):
+            self.speak("You're welcome! I'm happy to help you create charts. What else would you like to see?")
+            
         else:
-            self.speak("I'm not sure what you want. Please say 'sales', 'weather', or 'students' to create a chart. Or say 'goodbye' to end the call.")
+            self.speak("I'm not sure what you want. Please say 'sales', 'weather', or 'students' to create a chart. Or say 'help' to learn what I can do.")
             
     def quick_create(self, dataset):
         """Quick create chart from button click"""
@@ -337,7 +358,7 @@ class PhoneCallChartApp:
             self.speak(f"I'll create a beautiful chart for the {dataset} dataset.")
             self.create_chart(dataset)
         else:
-            self.add_to_conversation("System", f"Please start the phone call first to create charts!")
+            self.speak("Please start the phone call first to create charts!")
         
     def create_chart(self, dataset_name):
         """Create and display a beautiful chart"""
@@ -420,8 +441,11 @@ class PhoneCallChartApp:
         canvas.draw()
         canvas.get_tk_widget().pack(fill='both', expand=True)
         
-        # Success message
+        # Success message - SPEAK it!
         self.speak(f"I've successfully created a {self.current_chart_type} chart showing {dataset['description']}. The chart is now displayed on your screen!")
+        
+        # Ask what they want next
+        self.speak("What would you like me to do next? I can change the chart type, create another chart, or help you with something else.")
         
     def run(self):
         """Run the application"""
