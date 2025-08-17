@@ -3,7 +3,7 @@
 📞 PHONE CALL STYLE Voice-Enabled Chart Creator
 ======================================================================
 This opens a beautiful interface automatically and works like a phone call!
-You speak, it speaks back, and charts appear on screen!
+Click mic ONCE, then continuous conversation - no more clicking needed!
 """
 
 import tkinter as tk
@@ -56,6 +56,7 @@ class PhoneCallChartApp:
         self.current_dataset = None
         self.current_chart_type = 'bar'
         self.is_listening = False
+        self.conversation_active = False
         
         self.setup_ui()
         self.start_conversation()
@@ -79,7 +80,7 @@ class PhoneCallChartApp:
         title_label.pack()
         
         subtitle_label = tk.Label(header_frame, 
-                                 text="Speak to create charts - just like a phone call!", 
+                                 text="Click mic ONCE to start - then continuous conversation!", 
                                  font=('Arial', 14), 
                                  bg='#1a1a2e', 
                                  fg='#ffffff')
@@ -123,18 +124,28 @@ class PhoneCallChartApp:
         voice_frame.pack(pady=(0, 20))
         
         self.mic_button = tk.Button(voice_frame, 
-                                   text="🎤 START CONVERSATION", 
+                                   text="🎤 START PHONE CALL", 
                                    font=('Arial', 14, 'bold'),
                                    bg='#00d4ff',
                                    fg='#1a1a2e',
-                                   command=self.toggle_listening,
+                                   command=self.start_phone_call,
                                    width=25,
                                    height=2)
         self.mic_button.pack()
         
+        # End call button (initially hidden)
+        self.end_call_button = tk.Button(voice_frame, 
+                                        text="📞 END CALL", 
+                                        font=('Arial', 12, 'bold'),
+                                        bg='#ff6b6b',
+                                        fg='white',
+                                        command=self.end_phone_call,
+                                        width=20,
+                                        height=1)
+        
         # Status display
         self.status_label = tk.Label(left_panel, 
-                                    text="Ready to start conversation...", 
+                                    text="Click START PHONE CALL to begin conversation...", 
                                     font=('Arial', 12), 
                                     bg='#16213e', 
                                     fg='#00ff88')
@@ -158,7 +169,7 @@ class PhoneCallChartApp:
         
         # Chart placeholder
         self.chart_placeholder = tk.Label(self.chart_frame, 
-                                         text="🎯 Speak to create your first chart!\n\nSay: 'show me sales data' or 'create weather chart'", 
+                                         text="🎯 Click START PHONE CALL and speak to create charts!\n\nSay: 'show me sales data' or 'create weather chart'", 
                                          font=('Arial', 16), 
                                          bg='#0f3460', 
                                          fg='#ffffff',
@@ -210,51 +221,70 @@ class PhoneCallChartApp:
         self.engine.runAndWait()
         
     def start_conversation(self):
-        """Start the phone call conversation"""
-        self.speak("Hello! Welcome to your personal chart assistant. I'm here to help you create beautiful charts. Just speak to me and I'll create charts for you!")
+        """Initial greeting"""
+        self.add_to_conversation("System", "Hello! Welcome to your personal chart assistant. Click START PHONE CALL to begin our conversation!")
         
-    def toggle_listening(self):
-        """Toggle voice recognition on/off"""
-        if not self.is_listening:
-            self.start_listening()
-        else:
-            self.stop_listening()
-            
-    def start_listening(self):
-        """Start listening for voice input"""
+    def start_phone_call(self):
+        """Start the phone call - continuous listening begins"""
+        self.conversation_active = True
         self.is_listening = True
-        self.mic_button.config(text="🎤 STOP LISTENING", bg='#ff6b6b')
-        self.status_label.config(text="Listening... Speak now!", fg='#00ff88')
         
-        # Start listening in a separate thread
-        threading.Thread(target=self.listen_loop, daemon=True).start()
+        # Change button states
+        self.mic_button.pack_forget()  # Hide start button
+        self.end_call_button.pack()    # Show end call button
         
-    def stop_listening(self):
-        """Stop listening for voice input"""
+        # Update status
+        self.status_label.config(text="📞 Phone call active - I'm listening continuously!", fg='#00ff88')
+        
+        # Start the conversation
+        self.speak("Hello! I'm your personal chart assistant. I'm now listening continuously - just speak naturally and I'll help you create charts!")
+        
+        # Start continuous listening
+        threading.Thread(target=self.continuous_listen_loop, daemon=True).start()
+        
+    def end_phone_call(self):
+        """End the phone call"""
+        self.conversation_active = False
         self.is_listening = False
-        self.mic_button.config(text="🎤 START CONVERSATION", bg='#00d4ff')
-        self.status_label.config(text="Conversation stopped", fg='#ff6b6b')
         
-    def listen_loop(self):
-        """Main listening loop"""
-        while self.is_listening:
+        # Change button states back
+        self.end_call_button.pack_forget()  # Hide end call button
+        self.mic_button.pack()              # Show start button again
+        
+        # Update status
+        self.status_label.config(text="Phone call ended. Click START PHONE CALL to begin again...", fg='#ff6b6b')
+        
+        # Farewell message
+        self.add_to_conversation("System", "Phone call ended. Thanks for using the Chart Creator!")
+        
+    def continuous_listen_loop(self):
+        """Continuous listening loop - like a real phone call"""
+        while self.conversation_active and self.is_listening:
             try:
                 with self.microphone as source:
-                    self.recognizer.adjust_for_ambient_noise(source, duration=0.5)
-                    audio = self.recognizer.listen(source, timeout=1, phrase_time_limit=10)
+                    self.recognizer.adjust_for_ambient_noise(source, duration=0.3)
+                    audio = self.recognizer.listen(source, timeout=2, phrase_time_limit=8)
                     
                 text = self.recognizer.recognize_google(audio)
                 self.add_to_conversation("You", text)
+                
+                # Process the command
                 self.process_voice_command(text)
                 
+                # Small delay before listening again
+                time.sleep(0.5)
+                
             except sr.WaitTimeoutError:
+                # No speech detected, continue listening
                 continue
             except sr.UnknownValueError:
+                # Could not understand, continue listening
                 continue
             except sr.RequestError:
+                # API error, continue listening
                 continue
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"Error in listening loop: {e}")
                 continue
                 
     def process_voice_command(self, command):
@@ -293,13 +323,21 @@ class PhoneCallChartApp:
             if self.current_dataset:
                 self.create_chart(self.current_dataset)
                 
+        # Check for exit commands
+        elif any(word in command_lower for word in ['goodbye', 'bye', 'end call', 'hang up', 'stop']):
+            self.speak("Goodbye! Ending our phone call. Thanks for using the Chart Creator!")
+            self.end_phone_call()
+            
         else:
-            self.speak("I'm not sure what you want. Please say 'sales', 'weather', or 'students' to create a chart.")
+            self.speak("I'm not sure what you want. Please say 'sales', 'weather', or 'students' to create a chart. Or say 'goodbye' to end the call.")
             
     def quick_create(self, dataset):
         """Quick create chart from button click"""
-        self.speak(f"I'll create a beautiful chart for the {dataset} dataset.")
-        self.create_chart(dataset)
+        if self.conversation_active:
+            self.speak(f"I'll create a beautiful chart for the {dataset} dataset.")
+            self.create_chart(dataset)
+        else:
+            self.add_to_conversation("System", f"Please start the phone call first to create charts!")
         
     def create_chart(self, dataset_name):
         """Create and display a beautiful chart"""
