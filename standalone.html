@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice-Enabled Chart Creator - Standalone</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .control-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .chart-area {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            min-height: 600px;
+        }
+
+        .voice-control {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            color: white;
+            text-align: center;
+        }
+
+        .mic-button {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            border: 3px solid rgba(255,255,255,0.3);
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 15px auto;
+            display: block;
+        }
+
+        .mic-button:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.1);
+        }
+
+        .mic-button.recording {
+            background: #e74c3c;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .voice-status {
+            margin-top: 15px;
+            font-size: 1.1rem;
+        }
+
+        .dataset-section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 8px;
+        }
+
+        .dataset-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid #3498db;
+        }
+
+        .dataset-card:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .dataset-card.selected {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+
+        .dataset-name {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .dataset-desc {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .chart-controls {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .control-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .control-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .generate-btn {
+            background: #27ae60;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .generate-btn:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 500px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+        }
+
+        .chart-placeholder {
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .chart-placeholder i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: #bdc3c7;
+        }
+
+        .voice-feedback {
+            background: #e8f5e8;
+            border: 1px solid #c3e6c3;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #155724;
+        }
+
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .suggestion-btn {
+            background: #3498db;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .suggestion-btn:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
+
+        .status-bar {
+            background: #34495e;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .demo-notice {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #856404;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-chart-line"></i> Voice Chart Creator</h1>
+            <p>Create beautiful charts using just your voice! 🎤✨</p>
+        </div>
+
+        <div class="main-content">
+            <div class="control-panel">
+                <div class="demo-notice">
+                    <strong>🎯 Standalone Demo Version</strong><br>
+                    This version works without Python dependencies.<br>
+                    For full features, run the Python version.
+                </div>
+
+                <div class="voice-control">
+                    <h3><i class="fas fa-microphone"></i> Voice Control</h3>
+                    <button class="mic-button" id="micButton" onclick="toggleRecording()">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <div class="voice-status" id="voiceStatus">Click to start recording</div>
+                </div>
+
+                <div class="voice-feedback" id="voiceFeedback" style="display: none;">
+                    <div id="feedbackMessage"></div>
+                    <div class="suggestions" id="suggestions"></div>
+                </div>
+
+                <div class="dataset-section">
+                    <h3 class="section-title"><i class="fas fa-database"></i> Available Datasets</h3>
+                    <div id="datasetsList"></div>
+                </div>
+
+                <div class="chart-controls">
+                    <h3 class="section-title"><i class="fas fa-cogs"></i> Chart Settings</h3>
+                    
+                    <div class="control-group">
+                        <label class="control-label">Chart Type</label>
+                        <select id="chartType" class="control-input">
+                            <option value="bar">Bar Chart</option>
+                            <option value="line">Line Chart</option>
+                            <option value="scatter">Scatter Plot</option>
+                            <option value="pie">Pie Chart</option>
+                            <option value="histogram">Histogram</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label">X-Axis Column</label>
+                        <select id="xColumn" class="control-input">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label">Y-Axis Column</label>
+                        <select id="yColumn" class="control-input">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label">Color Column (Optional)</label>
+                        <select id="colorColumn" class="control-input">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label">Chart Title</label>
+                        <input type="text" id="chartTitle" class="control-input" placeholder="Enter chart title...">
+                    </div>
+
+                    <button class="generate-btn" onclick="generateChart()">
+                        <i class="fas fa-magic"></i> Generate Chart
+                    </button>
+                </div>
+            </div>
+
+            <div class="chart-area">
+                <div class="status-bar">
+                    <i class="fas fa-info-circle"></i>
+                    <span id="statusMessage">Ready to create charts! Use voice commands or manual controls.</span>
+                </div>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Creating your chart...</p>
+                </div>
+
+                <div class="chart-container" id="chartContainer">
+                    <div class="chart-placeholder">
+                        <i class="fas fa-chart-bar"></i>
+                        <h3>No Chart Yet</h3>
+                        <p>Use voice commands or manual controls to create your first chart!</p>
+                        <p><strong>Try saying:</strong> "Show me the sales dataset" or "Create a bar chart"</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample datasets (embedded in the HTML)
+        const SAMPLE_DATASETS = {
+            'sales': {
+                'name': 'Sales Data',
+                'description': 'Monthly sales data for different products',
+                'columns': ['Month', 'Product', 'Sales', 'Region'],
+                'data': [
+                    ['Jan', 'Laptop', 1200, 'North'],
+                    ['Jan', 'Phone', 800, 'North'],
+                    ['Feb', 'Laptop', 1400, 'South'],
+                    ['Feb', 'Phone', 900, 'South'],
+                    ['Mar', 'Laptop', 1100, 'East'],
+                    ['Mar', 'Phone', 1000, 'East']
+                ]
+            },
+            'weather': {
+                'name': 'Weather Data',
+                'description': 'Daily temperature and humidity data',
+                'columns': ['Date', 'Temperature', 'Humidity', 'City'],
+                'data': [
+                    ['2024-01-01', 25, 60, 'Mumbai'],
+                    ['2024-01-02', 28, 55, 'Mumbai'],
+                    ['2024-01-03', 30, 50, 'Delhi'],
+                    ['2024-01-04', 32, 45, 'Delhi'],
+                    ['2024-01-05', 27, 65, 'Chennai'],
+                    ['2024-01-06', 29, 58, 'Chennai']
+                ]
+            },
+            'students': {
+                'name': 'Student Performance',
+                'description': 'Student scores in different subjects',
+                'columns': ['Student', 'Math', 'Science', 'English', 'Grade'],
+                'data': [
+                    ['Alice', 85, 90, 88, 'A'],
+                    ['Bob', 78, 85, 92, 'B'],
+                    ['Charlie', 92, 88, 85, 'A'],
+                    ['Diana', 75, 80, 78, 'C'],
+                    ['Eve', 88, 92, 90, 'A'],
+                    ['Frank', 82, 78, 85, 'B']
+                ]
+            }
+        };
+
+        let isRecording = false;
+        let recognition = null;
+        let currentDataset = null;
+        let datasets = [];
+
+        // Initialize speech recognition
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+
+                recognition.onstart = function() {
+                    console.log('Speech recognition started');
+                    updateVoiceStatus('Listening... Speak now!');
+                };
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    console.log('Transcript:', transcript);
+                    processVoiceCommand(transcript);
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    updateVoiceStatus('Error: ' + event.error);
+                    stopRecording();
+                };
+
+                recognition.onend = function() {
+                    console.log('Speech recognition ended');
+                    stopRecording();
+                };
+            } else {
+                alert('Speech recognition not supported in this browser');
+            }
+        }
+
+        function toggleRecording() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        function startRecording() {
+            if (recognition) {
+                isRecording = true;
+                document.getElementById('micButton').classList.add('recording');
+                document.getElementById('micButton').innerHTML = '<i class="fas fa-stop"></i>';
+                recognition.start();
+            }
+        }
+
+        function stopRecording() {
+            if (recognition) {
+                recognition.stop();
+            }
+            isRecording = false;
+            document.getElementById('micButton').classList.remove('recording');
+            document.getElementById('micButton').innerHTML = '<i class="fas fa-microphone"></i>';
+            updateVoiceStatus('Click to start recording');
+        }
+
+        function updateVoiceStatus(message) {
+            document.getElementById('voiceStatus').textContent = message;
+        }
+
+        function processVoiceCommand(command) {
+            // Simple voice command processing
+            const lowerCommand = command.toLowerCase();
+            let message = '';
+            let suggestions = [];
+            let config = {};
+
+            if (lowerCommand.includes('sales') || lowerCommand.includes('sale')) {
+                message = 'I found the sales dataset. What type of chart would you like?';
+                suggestions = ['bar chart', 'line chart', 'pie chart'];
+                config = {dataset_id: 'sales'};
+            } else if (lowerCommand.includes('weather')) {
+                message = 'I found the weather dataset. What type of chart would you like?';
+                suggestions = ['line chart', 'scatter plot', 'bar chart'];
+                config = {dataset_id: 'weather'};
+            } else if (lowerCommand.includes('student') || lowerCommand.includes('performance')) {
+                message = 'I found the student performance dataset. What type of chart would you like?';
+                suggestions = ['bar chart', 'scatter plot', 'histogram'];
+                config = {dataset_id: 'students'};
+            } else if (lowerCommand.includes('bar')) {
+                message = 'Great! I\'ll create a bar chart. Which columns should I use for X and Y axes?';
+                config = {chart_type: 'bar'};
+            } else if (lowerCommand.includes('line')) {
+                message = 'Perfect! I\'ll create a line chart. Which columns should I use for X and Y axes?';
+                config = {chart_type: 'line'};
+            } else if (lowerCommand.includes('pie')) {
+                message = 'Excellent choice! I\'ll create a pie chart. Which column should I use for the values?';
+                config = {chart_type: 'pie'};
+            } else if (lowerCommand.includes('scatter')) {
+                message = 'Great! I\'ll create a scatter plot. Which columns should I use for X and Y axes?';
+                config = {chart_type: 'scatter'};
+            } else {
+                message = 'I can help you create charts! Try saying "show me the sales dataset" or "create a bar chart".';
+                suggestions = ['show sales data', 'create bar chart', 'weather line chart'];
+            }
+
+            showVoiceFeedback(message, suggestions, config);
+            
+            // Auto-fill chart configuration if available
+            if (config.dataset_id) {
+                selectDataset(config.dataset_id);
+            }
+            if (config.chart_type) {
+                document.getElementById('chartType').value = config.chart_type;
+            }
+        }
+
+        function showVoiceFeedback(message, suggestions, config) {
+            const feedback = document.getElementById('voiceFeedback');
+            const messageEl = document.getElementById('feedbackMessage');
+            const suggestionsEl = document.getElementById('suggestions');
+
+            messageEl.textContent = message;
+            
+            suggestionsEl.innerHTML = '';
+            if (suggestions && suggestions.length > 0) {
+                suggestions.forEach(suggestion => {
+                    const btn = document.createElement('button');
+                    btn.className = 'suggestion-btn';
+                    btn.textContent = suggestion;
+                    btn.onclick = () => processVoiceCommand(suggestion);
+                    suggestionsEl.appendChild(btn);
+                });
+            }
+
+            feedback.style.display = 'block';
+            
+            // Hide feedback after 10 seconds
+            setTimeout(() => {
+                feedback.style.display = 'none';
+            }, 10000);
+        }
+
+        function loadDatasets() {
+            datasets = [];
+            
+            // Convert sample datasets to the expected format
+            for (const [key, dataset] of Object.entries(SAMPLE_DATASETS)) {
+                datasets.push({
+                    id: key,
+                    name: dataset.name,
+                    description: dataset.description,
+                    columns: dataset.columns,
+                    type: 'sample'
+                });
+            }
+            
+            displayDatasets();
+        }
+
+        function displayDatasets() {
+            const container = document.getElementById('datasetsList');
+            container.innerHTML = '';
+
+            datasets.forEach(dataset => {
+                const card = document.createElement('div');
+                card.className = 'dataset-card';
+                card.onclick = () => selectDataset(dataset.id);
+                
+                card.innerHTML = `
+                    <div class="dataset-name">${dataset.name}</div>
+                    <div class="dataset-desc">${dataset.description}</div>
+                    <small style="color: #27ae60;">📊 Sample Dataset</small>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        function selectDataset(datasetId) {
+            const dataset = SAMPLE_DATASETS[datasetId];
+            if (dataset) {
+                currentDataset = {
+                    data: dataset.data,
+                    columns: dataset.columns,
+                    id: datasetId
+                };
+                
+                // Update column dropdowns
+                updateColumnDropdowns(dataset.columns);
+                
+                // Update status
+                document.getElementById('statusMessage').innerHTML = 
+                    `<i class="fas fa-check-circle"></i> Selected: ${dataset.name} (${dataset.data.length} rows, ${dataset.columns.length} columns)`;
+                
+                // Highlight selected dataset
+                document.querySelectorAll('.dataset-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                
+                const selectedCard = Array.from(document.querySelectorAll('.dataset-card'))
+                    .find(card => card.textContent.includes(dataset.name));
+                if (selectedCard) {
+                    selectedCard.classList.add('selected');
+                }
+            }
+        }
+
+        function updateColumnDropdowns(columns) {
+            const xSelect = document.getElementById('xColumn');
+            const ySelect = document.getElementById('yColumn');
+            const colorSelect = document.getElementById('colorColumn');
+            
+            // Clear existing options
+            xSelect.innerHTML = '<option value="">Select column...</option>';
+            ySelect.innerHTML = '<option value="">Select column...</option>';
+            colorSelect.innerHTML = '<option value="">Select column...</option>';
+            
+            // Add column options
+            columns.forEach(column => {
+                const option = document.createElement('option');
+                option.value = column;
+                option.textContent = column;
+                
+                xSelect.appendChild(option.cloneNode(true));
+                ySelect.appendChild(option.cloneNode(true));
+                colorSelect.appendChild(option.cloneNode(true));
+            });
+        }
+
+        function createChart(data, chartType, xColumn, yColumn, colorColumn, title) {
+            const chartData = [];
+            const layout = {
+                title: title || `${yColumn} by ${xColumn}`,
+                template: "plotly_white",
+                font: {size: 14},
+                margin: {l: 50, r: 50, t: 80, b: 50}
+            };
+
+            if (chartType === 'bar') {
+                if (colorColumn) {
+                    // Group data by color column
+                    const groupedData = {};
+                    data.forEach(row => {
+                        const color = row[data.columns.indexOf(colorColumn)];
+                        if (!groupedData[color]) groupedData[color] = [];
+                        groupedData[color].push({
+                            x: row[data.columns.indexOf(xColumn)],
+                            y: row[data.columns.indexOf(yColumn)]
+                        });
+                    });
+
+                    Object.entries(groupedData).forEach(([color, points]) => {
+                        chartData.push({
+                            x: points.map(p => p.x),
+                            y: points.map(p => p.y),
+                            type: 'bar',
+                            name: color,
+                            marker: {color: getRandomColor()}
+                        });
+                    });
+                } else {
+                    chartData.push({
+                        x: data.map(row => row[data.columns.indexOf(xColumn)]),
+                        y: data.map(row => row[data.columns.indexOf(yColumn)]),
+                        type: 'bar',
+                        marker: {color: '#3498db'}
+                    });
+                }
+            } else if (chartType === 'line') {
+                if (colorColumn) {
+                    const groupedData = {};
+                    data.forEach(row => {
+                        const color = row[data.columns.indexOf(colorColumn)];
+                        if (!groupedData[color]) groupedData[color] = [];
+                        groupedData[color].push({
+                            x: row[data.columns.indexOf(xColumn)],
+                            y: row[data.columns.indexOf(yColumn)]
+                        });
+                    });
+
+                    Object.entries(groupedData).forEach(([color, points]) => {
+                        chartData.push({
+                            x: points.map(p => p.x),
+                            y: points.map(p => p.y),
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            name: color,
+                            marker: {color: getRandomColor()}
+                        });
+                    });
+                } else {
+                    chartData.push({
+                        x: data.map(row => row[data.columns.indexOf(xColumn)]),
+                        y: data.map(row => row[data.columns.indexOf(yColumn)]),
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        marker: {color: '#3498db'}
+                    });
+                }
+            } else if (chartType === 'scatter') {
+                if (colorColumn) {
+                    const groupedData = {};
+                    data.forEach(row => {
+                        const color = row[data.columns.indexOf(colorColumn)];
+                        if (!groupedData[color]) groupedData[color] = [];
+                        groupedData[color].push({
+                            x: row[data.columns.indexOf(xColumn)],
+                            y: row[data.columns.indexOf(yColumn)]
+                        });
+                    });
+
+                    Object.entries(groupedData).forEach(([color, points]) => {
+                        chartData.push({
+                            x: points.map(p => p.x),
+                            y: points.map(p => p.y),
+                            type: 'scatter',
+                            mode: 'markers',
+                            name: color,
+                            marker: {color: getRandomColor()}
+                        });
+                    });
+                } else {
+                    chartData.push({
+                        x: data.map(row => row[data.columns.indexOf(xColumn)]),
+                        y: data.map(row => row[data.columns.indexOf(yColumn)]),
+                        type: 'scatter',
+                        mode: 'markers',
+                        marker: {color: '#3498db'}
+                    });
+                }
+            } else if (chartType === 'pie') {
+                // Aggregate data for pie chart
+                const aggregated = {};
+                data.forEach(row => {
+                    const key = row[data.columns.indexOf(xColumn)];
+                    const value = parseFloat(row[data.columns.indexOf(yColumn)]) || 0;
+                    aggregated[key] = (aggregated[key] || 0) + value;
+                });
+
+                chartData.push({
+                    labels: Object.keys(aggregated),
+                    values: Object.values(aggregated),
+                    type: 'pie',
+                    marker: {colors: Object.keys(aggregated).map(() => getRandomColor())}
+                });
+            } else if (chartType === 'histogram') {
+                chartData.push({
+                    x: data.map(row => row[data.columns.indexOf(xColumn)]),
+                    type: 'histogram',
+                    marker: {color: '#3498db'}
+                });
+            }
+
+            return {data: chartData, layout: layout};
+        }
+
+        function getRandomColor() {
+            const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#34495e'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function generateChart() {
+            if (!currentDataset) {
+                alert('Please select a dataset first!');
+                return;
+            }
+
+            const chartType = document.getElementById('chartType').value;
+            const xColumn = document.getElementById('xColumn').value;
+            const yColumn = document.getElementById('yColumn').value;
+            const colorColumn = document.getElementById('colorColumn').value;
+            const title = document.getElementById('chartTitle').value;
+
+            if (!xColumn || !yColumn) {
+                alert('Please select X and Y axis columns!');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('chartContainer').innerHTML = '';
+
+            try {
+                // Create chart data structure
+                const chartData = {
+                    data: currentDataset.data,
+                    columns: currentDataset.columns
+                };
+
+                // Generate chart
+                const chart = createChart(chartData, chartType, xColumn, yColumn, colorColumn, title);
+                
+                // Display chart
+                Plotly.newPlot('chartContainer', chart.data, chart.layout);
+                
+                document.getElementById('statusMessage').innerHTML = 
+                    `<i class="fas fa-chart-line"></i> Chart generated successfully! Dataset: ${currentDataset.data.length} rows, ${currentDataset.columns.length} columns`;
+                
+            } catch (error) {
+                console.error('Error generating chart:', error);
+                document.getElementById('chartContainer').innerHTML = `
+                    <div class="chart-placeholder">
+                        <i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i>
+                        <h3>Error Generating Chart</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initSpeechRecognition();
+            loadDatasets();
+            
+            // Auto-start voice recognition after 2 seconds
+            setTimeout(() => {
+                showVoiceFeedback(
+                    'Welcome! I\'m your voice chart assistant. Try saying "show me the sales dataset" or "create a bar chart".',
+                    ['show sales data', 'create bar chart', 'weather line chart']
+                );
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
