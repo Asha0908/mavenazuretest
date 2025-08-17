@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎤 Beautiful Voice-Enabled Chart Creator</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .control-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .voice-section {
+            margin-bottom: 30px;
+        }
+
+        .mic-button {
+            width: 100%;
+            height: 80px;
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            border: none;
+            border-radius: 15px;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .mic-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+        }
+
+        .mic-button.listening {
+            background: linear-gradient(45deg, #FF6B6B, #FFE66D);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .status {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .status.listening {
+            background: #e3f2fd;
+            color: #1976d2;
+            border: 2px solid #2196f3;
+        }
+
+        .status.success {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 2px solid #4caf50;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+            border: 2px solid #f44336;
+        }
+
+        .dataset-buttons {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .dataset-btn {
+            padding: 15px 20px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .dataset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .chart-controls {
+            display: grid;
+            gap: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: #f0f0f0;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: #e0e0e0;
+            transform: translateY(-1px);
+        }
+
+        .control-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            min-height: 600px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chart-placeholder {
+            text-align: center;
+            color: #666;
+        }
+
+        .chart-placeholder h3 {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .chart-placeholder p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        .voice-feedback {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .voice-feedback h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .feedback-text {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 Beautiful Voice-Enabled Chart Creator</h1>
+            <p>Speak to create stunning visual charts instantly!</p>
+        </div>
+
+        <div class="main-content">
+            <div class="control-panel">
+                <div class="voice-section">
+                    <button id="micButton" class="mic-button">
+                        🎤 Click to Start Voice Recognition
+                    </button>
+                    <div id="status" class="status">Ready to listen...</div>
+                </div>
+
+                <div class="dataset-buttons">
+                    <h3>📊 Quick Access Datasets</h3>
+                    <button class="dataset-btn" onclick="createChart('sales')">💰 Sales Data</button>
+                    <button class="dataset-btn" onclick="createChart('weather')">🌤️ Weather Data</button>
+                    <button class="dataset-btn" onclick="createChart('students')">📚 Student Performance</button>
+                </div>
+
+                <div class="chart-controls">
+                    <h3>🎨 Chart Customization</h3>
+                    <div class="control-group">
+                        <button class="control-btn active" onclick="changeChartType('bar')">📊 Bar</button>
+                        <button class="control-btn" onclick="changeChartType('line')">📈 Line</button>
+                        <button class="control-btn" onclick="changeChartType('pie')">🥧 Pie</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div id="chartPlaceholder" class="chart-placeholder">
+                    <h3>🎯 Ready to Create Charts!</h3>
+                    <p>Click the microphone button and say:</p>
+                    <p><strong>"Show me sales data"</strong></p>
+                    <p><strong>"Create weather chart"</strong></p>
+                    <p><strong>"Display student performance"</strong></p>
+                    <p>Or use the quick access buttons on the left!</p>
+                </div>
+                <div id="chartArea" style="display: none; width: 100%; height: 100%;"></div>
+            </div>
+        </div>
+
+        <div class="voice-feedback">
+            <h3>🤖 Voice Assistant Feedback</h3>
+            <div id="feedbackText" class="feedback-text">
+                Welcome! I'm ready to help you create beautiful charts. Just speak your request!
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentChartType = 'bar';
+        let currentDataset = null;
+        let recognition = null;
+
+        // Initialize speech recognition
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+
+                recognition.onstart = function() {
+                    document.getElementById('micButton').classList.add('listening');
+                    document.getElementById('micButton').textContent = '🎤 Listening...';
+                    updateStatus('Listening...', 'listening');
+                };
+
+                recognition.onresult = function(event) {
+                    const command = event.results[0][0].transcript;
+                    updateStatus(`Heard: "${command}"`, 'success');
+                    processVoiceCommand(command);
+                };
+
+                recognition.onerror = function(event) {
+                    updateStatus(`Error: ${event.error}`, 'error');
+                    resetMicButton();
+                };
+
+                recognition.onend = function() {
+                    resetMicButton();
+                };
+            } else {
+                updateStatus('Speech recognition not supported in this browser', 'error');
+            }
+        }
+
+        function resetMicButton() {
+            document.getElementById('micButton').classList.remove('listening');
+            document.getElementById('micButton').textContent = '🎤 Click to Start Voice Recognition';
+            updateStatus('Ready to listen...', 'success');
+        }
+
+        function updateStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        function updateFeedback(message) {
+            document.getElementById('feedbackText').textContent = message;
+        }
+
+        function processVoiceCommand(command) {
+            const lowerCommand = command.toLowerCase();
+            
+            // Send to backend for processing
+            fetch('/api/voice_command', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ command: lowerCommand })
+            })
+            .then(response => response.json())
+            .then(data => {
+                updateFeedback(data.message);
+                
+                if (data.action === 'create_chart') {
+                    currentDataset = data.dataset;
+                    createChart(data.dataset, currentChartType);
+                } else if (data.action === 'change_type') {
+                    currentChartType = data.chart_type;
+                    if (currentDataset) {
+                        createChart(currentDataset, currentChartType);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                updateFeedback('Sorry, there was an error processing your command.');
+            });
+        }
+
+        function createChart(dataset, chartType = 'bar') {
+            currentDataset = dataset;
+            currentChartType = chartType;
+            
+            updateFeedback(`Creating a beautiful ${chartType} chart for ${dataset} data...`);
+            
+            fetch('/api/create_chart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    dataset: dataset, 
+                    chart_type: chartType 
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayChart(data.chart);
+                    updateFeedback(`Chart created successfully! Showing ${dataset} data as a ${chartType} chart.`);
+                    updateStatus(`Chart displayed: ${dataset}`, 'success');
+                } else {
+                    updateFeedback('Error creating chart: ' + data.error);
+                    updateStatus('Chart creation failed', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                updateFeedback('Sorry, there was an error creating the chart.');
+                updateStatus('Chart creation failed', 'error');
+            });
+        }
+
+        function changeChartType(chartType) {
+            currentChartType = chartType;
+            
+            // Update button states
+            document.querySelectorAll('.control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            if (currentDataset) {
+                createChart(currentDataset, chartType);
+            } else {
+                updateFeedback(`Chart type changed to ${chartType}. Now speak a dataset name to create a chart!`);
+            }
+        }
+
+        function displayChart(chartJson) {
+            const chartArea = document.getElementById('chartArea');
+            const placeholder = document.getElementById('chartPlaceholder');
+            
+            placeholder.style.display = 'none';
+            chartArea.style.display = 'block';
+            
+            const chartData = JSON.parse(chartJson);
+            Plotly.newPlot('chartArea', chartData.data, chartData.layout, {responsive: true});
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initSpeechRecognition();
+            
+            // Set up mic button click
+            document.getElementById('micButton').addEventListener('click', function() {
+                if (recognition) {
+                    recognition.start();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
