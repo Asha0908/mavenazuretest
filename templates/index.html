@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice-Enabled Chart Creator</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .control-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .chart-area {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            min-height: 600px;
+        }
+
+        .voice-control {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            color: white;
+            text-align: center;
+        }
+
+        .mic-button {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            border: 3px solid rgba(255,255,255,0.3);
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 15px auto;
+            display: block;
+        }
+
+        .mic-button:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.1);
+        }
+
+        .mic-button.recording {
+            background: #e74c3c;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .voice-status {
+            margin-top: 15px;
+            font-size: 1.1rem;
+        }
+
+        .dataset-section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 8px;
+        }
+
+        .dataset-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid #3498db;
+        }
+
+        .dataset-card:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .dataset-card.selected {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+
+        .dataset-name {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .dataset-desc {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border: 2px dashed #dee2e6;
+        }
+
+        .upload-section:hover {
+            border-color: #3498db;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: #3498db;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .chart-controls {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .control-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .control-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .generate-btn {
+            background: #27ae60;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .generate-btn:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 500px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+        }
+
+        .chart-placeholder {
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .chart-placeholder i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: #bdc3c7;
+        }
+
+        .voice-feedback {
+            background: #e8f5e8;
+            border: 1px solid #c3e6c3;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #155724;
+        }
+
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .suggestion-btn {
+            background: #3498db;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .suggestion-btn:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
+
+        .status-bar {
+            background: #34495e;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-chart-line"></i> Voice Chart Creator</h1>
+            <p>Create beautiful charts using just your voice! 🎤✨</p>
+        </div>
+
+        <div class="main-content">
+            <div class="control-panel">
+                <div class="voice-control">
+                    <h3><i class="fas fa-microphone"></i> Voice Control</h3>
+                    <button class="mic-button" id="micButton" onclick="toggleRecording()">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <div class="voice-status" id="voiceStatus">Click to start recording</div>
+                </div>
+
+                <div class="voice-feedback" id="voiceFeedback" style="display: none;">
+                    <div id="feedbackMessage"></div>
+                    <div class="suggestions" id="suggestions"></div>
+                </div>
+
+                <div class="dataset-section">
+                    <h3 class="section-title"><i class="fas fa-database"></i> Available Datasets</h3>
+                    <div id="datasetsList"></div>
+                </div>
+
+                <div class="upload-section">
+                    <h4><i class="fas fa-upload"></i> Upload Your Dataset</h4>
+                    <p>Support CSV, Excel files</p>
+                    <input type="file" id="fileInput" class="file-input" accept=".csv,.xlsx,.xls">
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                        Choose File
+                    </button>
+                </div>
+
+                <div class="chart-controls">
+                    <h3 class="section-title"><i class="fas fa-cogs"></i> Chart Settings</h3>
+                    
+                    <div class="control-group">
+                        <label class="control-label">Chart Type</label>
+                        <select id="chartType" class="control-input">
+                            <option value="bar">Bar Chart</option>
+                            <option value="line">Line Chart</option>
+                            <option value="scatter">Scatter Plot</option>
+                            <option value="pie">Pie Chart</option>
+                            <option value="histogram">Histogram</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label">X-Axis Column</label>
+                        <select id="xColumn" class="control-input">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label">Y-Axis Column</label>
+                        <select id="yColumn" class="control-input">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label">Color Column (Optional)</label>
+                        <select id="colorColumn" class="control-input">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label">Chart Title</label>
+                        <input type="text" id="chartTitle" class="control-input" placeholder="Enter chart title...">
+                    </div>
+
+                    <button class="generate-btn" onclick="generateChart()">
+                        <i class="fas fa-magic"></i> Generate Chart
+                    </button>
+                </div>
+            </div>
+
+            <div class="chart-area">
+                <div class="status-bar">
+                    <i class="fas fa-info-circle"></i>
+                    <span id="statusMessage">Ready to create charts! Use voice commands or manual controls.</span>
+                </div>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Creating your chart...</p>
+                </div>
+
+                <div class="chart-container" id="chartContainer">
+                    <div class="chart-placeholder">
+                        <i class="fas fa-chart-bar"></i>
+                        <h3>No Chart Yet</h3>
+                        <p>Use voice commands or manual controls to create your first chart!</p>
+                        <p><strong>Try saying:</strong> "Show me the sales dataset" or "Create a bar chart"</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isRecording = false;
+        let recognition = null;
+        let currentDataset = null;
+        let datasets = [];
+
+        // Initialize speech recognition
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+
+                recognition.onstart = function() {
+                    console.log('Speech recognition started');
+                    updateVoiceStatus('Listening... Speak now!');
+                };
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    console.log('Transcript:', transcript);
+                    processVoiceCommand(transcript);
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    updateVoiceStatus('Error: ' + event.error);
+                    stopRecording();
+                };
+
+                recognition.onend = function() {
+                    console.log('Speech recognition ended');
+                    stopRecording();
+                };
+            } else {
+                alert('Speech recognition not supported in this browser');
+            }
+        }
+
+        function toggleRecording() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        function startRecording() {
+            if (recognition) {
+                isRecording = true;
+                document.getElementById('micButton').classList.add('recording');
+                document.getElementById('micButton').innerHTML = '<i class="fas fa-stop"></i>';
+                recognition.start();
+            }
+        }
+
+        function stopRecording() {
+            if (recognition) {
+                recognition.stop();
+            }
+            isRecording = false;
+            document.getElementById('micButton').classList.remove('recording');
+            document.getElementById('micButton').innerHTML = '<i class="fas fa-microphone"></i>';
+            updateVoiceStatus('Click to start recording');
+        }
+
+        function updateVoiceStatus(message) {
+            document.getElementById('voiceStatus').textContent = message;
+        }
+
+        async function processVoiceCommand(command) {
+            try {
+                const response = await fetch('/api/voice-command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ command: command })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showVoiceFeedback(result.message, result.suggestions, result.chart_config);
+                    
+                    // Auto-fill chart configuration if available
+                    if (result.chart_config.dataset_id) {
+                        selectDataset(result.chart_config.dataset_id);
+                    }
+                    if (result.chart_config.chart_type) {
+                        document.getElementById('chartType').value = result.chart_config.chart_type;
+                    }
+                }
+            } catch (error) {
+                console.error('Error processing voice command:', error);
+                showVoiceFeedback('Sorry, I encountered an error processing your command.', []);
+            }
+        }
+
+        function showVoiceFeedback(message, suggestions, config) {
+            const feedback = document.getElementById('voiceFeedback');
+            const messageEl = document.getElementById('feedbackMessage');
+            const suggestionsEl = document.getElementById('suggestions');
+
+            messageEl.textContent = message;
+            
+            suggestionsEl.innerHTML = '';
+            if (suggestions && suggestions.length > 0) {
+                suggestions.forEach(suggestion => {
+                    const btn = document.createElement('button');
+                    btn.className = 'suggestion-btn';
+                    btn.textContent = suggestion;
+                    btn.onclick = () => processVoiceCommand(suggestion);
+                    suggestionsEl.appendChild(btn);
+                });
+            }
+
+            feedback.style.display = 'block';
+            
+            // Hide feedback after 10 seconds
+            setTimeout(() => {
+                feedback.style.display = 'none';
+            }, 10000);
+        }
+
+        async function loadDatasets() {
+            try {
+                const response = await fetch('/api/datasets');
+                datasets = await response.json();
+                displayDatasets();
+            } catch (error) {
+                console.error('Error loading datasets:', error);
+            }
+        }
+
+        function displayDatasets() {
+            const container = document.getElementById('datasetsList');
+            container.innerHTML = '';
+
+            datasets.forEach(dataset => {
+                const card = document.createElement('div');
+                card.className = 'dataset-card';
+                card.onclick = () => selectDataset(dataset.id);
+                
+                card.innerHTML = `
+                    <div class="dataset-name">${dataset.name}</div>
+                    <div class="dataset-desc">${dataset.description}</div>
+                    <small style="color: #27ae60;">${dataset.type === 'sample' ? '📊 Sample' : '📁 Uploaded'}</small>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        async function selectDataset(datasetId) {
+            try {
+                const response = await fetch(`/api/dataset/${datasetId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentDataset = result;
+                    
+                    // Update column dropdowns
+                    updateColumnDropdowns(result.columns);
+                    
+                    // Update status
+                    document.getElementById('statusMessage').innerHTML = 
+                        `<i class="fas fa-check-circle"></i> Selected: ${datasets.find(d => d.id === datasetId)?.name} (${result.shape[0]} rows, ${result.shape[1]} columns)`;
+                    
+                    // Highlight selected dataset
+                    document.querySelectorAll('.dataset-card').forEach(card => {
+                        card.classList.remove('selected');
+                    });
+                    
+                    const selectedCard = Array.from(document.querySelectorAll('.dataset-card'))
+                        .find(card => card.textContent.includes(datasets.find(d => d.id === datasetId)?.name));
+                    if (selectedCard) {
+                        selectedCard.classList.add('selected');
+                    }
+                }
+            } catch (error) {
+                console.error('Error selecting dataset:', error);
+            }
+        }
+
+        function updateColumnDropdowns(columns) {
+            const xSelect = document.getElementById('xColumn');
+            const ySelect = document.getElementById('yColumn');
+            const colorSelect = document.getElementById('colorColumn');
+            
+            // Clear existing options
+            xSelect.innerHTML = '<option value="">Select column...</option>';
+            ySelect.innerHTML = '<option value="">Select column...</option>';
+            colorSelect.innerHTML = '<option value="">Select column...</option>';
+            
+            // Add column options
+            columns.forEach(column => {
+                const option = document.createElement('option');
+                option.value = column;
+                option.textContent = column;
+                
+                xSelect.appendChild(option.cloneNode(true));
+                ySelect.appendChild(option.cloneNode(true));
+                colorSelect.appendChild(option.cloneNode(true));
+            });
+        }
+
+        async function generateChart() {
+            if (!currentDataset) {
+                alert('Please select a dataset first!');
+                return;
+            }
+
+            const chartType = document.getElementById('chartType').value;
+            const xColumn = document.getElementById('xColumn').value;
+            const yColumn = document.getElementById('yColumn').value;
+            const colorColumn = document.getElementById('colorColumn').value;
+            const title = document.getElementById('chartTitle').value;
+
+            if (!xColumn || !yColumn) {
+                alert('Please select X and Y axis columns!');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('chartContainer').innerHTML = '';
+
+            try {
+                const response = await fetch('/api/chart', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        dataset_id: currentDataset.dataset_id || currentDataset.id,
+                        chart_type: chartType,
+                        x_column: xColumn,
+                        y_column: yColumn,
+                        color_column: colorColumn || null,
+                        title: title || null
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Parse and display chart
+                    const chartData = JSON.parse(result.chart);
+                    Plotly.newPlot('chartContainer', chartData.data, chartData.layout);
+                    
+                    document.getElementById('statusMessage').innerHTML = 
+                        `<i class="fas fa-chart-line"></i> Chart generated successfully! Dataset: ${result.dataset_info.rows} rows, ${result.dataset_info.columns.length} columns`;
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                console.error('Error generating chart:', error);
+                document.getElementById('chartContainer').innerHTML = `
+                    <div class="chart-placeholder">
+                        <i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i>
+                        <h3>Error Generating Chart</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // File upload handling
+        document.getElementById('fileInput').addEventListener('change', async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Dataset uploaded successfully!');
+                    loadDatasets(); // Reload datasets list
+                } else {
+                    alert('Upload failed: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert('Upload failed. Please try again.');
+            }
+        });
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initSpeechRecognition();
+            loadDatasets();
+            
+            // Auto-start voice recognition after 2 seconds
+            setTimeout(() => {
+                showVoiceFeedback(
+                    'Welcome! I\'m your voice chart assistant. Try saying "show me the sales dataset" or "create a bar chart".',
+                    ['show sales data', 'create bar chart', 'weather line chart']
+                );
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
