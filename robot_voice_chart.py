@@ -138,7 +138,8 @@ class RobotAvatar:
 		if self.is_listening:
 			w = time.time() % 1.0
 			t = 46 + int(4 * np.sin(w * 2 * np.pi))
-			self.canvas.coords(self.pulse, t, t, 360 - t + -? 0, 360 - t + -? 0)
+			# Animate the outer ring by slightly expanding/contracting
+			self.canvas.coords(self.pulse, t, t, 360 - t, 360 - t)
 		else:
 			self.canvas.coords(self.pulse, 46, 46, 314, 314)
 
@@ -212,8 +213,10 @@ class RobotVoiceChartApp:
 	def _build_ui(self):
 		header = tk.Frame(self.root, bg="#0f1420")
 		header.pack(fill="x", padx=18, pady=(16, 8))
-		tk.Style().configure("TButton", font=("Arial", 11))
-		tk.Style().configure("TLabel", background="#0f1420", foreground="#b7c0cd")
+		# Configure ttk styles (optional)
+		style = ttk.Style()
+		style.configure("TButton", font=("Arial", 11))
+		style.configure("TLabel", background="#0f1420", foreground="#b7c0cd")
 		title = tk.Label(header, text="📞 Robot Voice Chart Creator", font=("Arial", 26, "bold"), fg="#00d4ff", bg="#0f1420")
 		title.pack()
 		sub = tk.Label(header, text="Hands-free. I'm already listening.", font=("Arial", 12), fg="#b7c0cd", bg="#0f1420")
