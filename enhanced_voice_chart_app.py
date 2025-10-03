@@ -10,6 +10,8 @@
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+import matplotlib
+matplotlib.use('TkAgg')  # Set backend before importing pyplot
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
@@ -246,6 +248,10 @@ class EnhancedVoiceChartApp:
         tk.Button(btns, text="📚 Students", command=lambda: self.quick_create('students'), bg='#6C5CE7', fg='white', font=('Arial', 9, 'bold')).pack(side='left', padx=3)
         tk.Button(btns, text="🏙️ Cities", command=lambda: self.quick_create('population'), bg='#00B894', fg='white', font=('Arial', 9, 'bold')).pack(side='left', padx=3)
         tk.Button(btns, text="🌸 Iris", command=lambda: self.quick_create('iris'), bg='#E17055', fg='white', font=('Arial', 9, 'bold')).pack(side='left', padx=3)
+        
+        # Test button
+        test_btn = tk.Button(quick_frame, text="🧪 Test Chart Display", command=self.test_chart_display, bg='#FF6B6B', fg='white', font=('Arial', 10, 'bold'))
+        test_btn.pack(pady=(10,0))
 
     def upload_dataset(self):
         """Upload custom dataset"""
@@ -685,6 +691,7 @@ class EnhancedVoiceChartApp:
             canvas = FigureCanvasTkAgg(fig, self.chart_frame)
             canvas.draw()
             canvas.get_tk_widget().pack(fill='both', expand=True)
+            plt.tight_layout()
 
         except Exception as e:
             self.speak("Oops! I had trouble creating that chart. Let me try a simpler version!")
@@ -701,6 +708,7 @@ class EnhancedVoiceChartApp:
             canvas = FigureCanvasTkAgg(fig, self.chart_frame)
             canvas.draw()
             canvas.get_tk_widget().pack(fill='both', expand=True)
+            plt.tight_layout()
         finally:
             plt.close(fig)
 
@@ -745,6 +753,32 @@ class EnhancedVoiceChartApp:
             self.speak("Please click START CHATTING first!")
             return
         self.create_chart_from_preferences(dataset, 'bar', '#00d4ff', None, None)
+    
+    def test_chart_display(self):
+        """Test function to verify chart display works"""
+        self.clear_chart()
+        fig, ax = plt.subplots(figsize=(10,6))
+        fig.patch.set_facecolor('#0f3460')
+        ax.set_facecolor('#0f3460')
+        
+        # Simple test data
+        categories = ['A', 'B', 'C', 'D']
+        values = [10, 20, 15, 25]
+        
+        ax.bar(categories, values, color=['#3498db', '#e74c3c', '#2ecc71', '#f39c12'], edgecolor='white', linewidth=1.5)
+        ax.set_title("📊 Test Chart", fontsize=18, color="#00d4ff", pad=16)
+        ax.set_xlabel("Category", color='white')
+        ax.set_ylabel("Value", color='white')
+        ax.tick_params(colors='white')
+        for spine in ax.spines.values(): 
+            spine.set_color("#00d4ff")
+        ax.grid(True, alpha=0.18, linestyle='--', color='white')
+        
+        canvas = FigureCanvasTkAgg(fig, self.chart_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill='both', expand=True)
+        plt.tight_layout()
+        plt.close(fig)
 
     def run(self):
         """Run the application"""
